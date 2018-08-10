@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Macaque - A modest app for visualizing neural net inference</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/script.js" async></script>
+  </head>
+
+  <body>
+
+    <div style="text-align:center;">
+      <h1>Macaque</h1>
+      <h3>A modest app for visualizing neural net inference</h3>
+      <hr/>
+      <img id="image" src="{{ image }}" alt="{{ alt }}" class="center">
+      <p>{{ caption }}</p>
+      <form method="post" enctype="multipart/form-data">
+        <input id="inFile" type="file" name="input-file" accept="image/">
+        <input type="submit" value="Upload">
+      </form>
+    </div>
+
+  </body>
+</html>
