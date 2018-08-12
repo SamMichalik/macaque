@@ -13,10 +13,16 @@
       <h3>A modest app for visualizing neural net inference</h3>
       <hr/>
       <img id="image" src="{{ image }}" alt="{{ alt }}" class="center">
-      <p>{{ caption }}</p>
+      <table class="center">
+        <tr class="caption">
+          {% for word in caption %}
+            <th class="caption">{{ word }}</th>
+          {% endfor %}
+        </tr>
+      </table>
       <form method="post" enctype="multipart/form-data">
         <input id="inFile" type="file" name="input-file" accept="image/">
-        <input type="submit" value="Upload">
+        <input type="submit" value="Caption">
       </form>
     </div>
 
