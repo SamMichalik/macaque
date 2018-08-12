@@ -18,7 +18,7 @@ class Model():
         dataset = Dataset("test", data, {})
         try:
             _, output = self.exp.run_model(dataset, write_out=False)
-            return " ".join(output["target"][0])
+            return output["target"][0]
         except RuntimeError as rerr:
             print(rerr)
             print("Have you trained your model?")
