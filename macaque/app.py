@@ -27,7 +27,7 @@ def upload():
 def respond_alphas():
     imgs = APP.config['model'].get_result_images()
     blob = BytesIO()
-    lens = [], prev = 0
+    lens, prev = [], 0
 
     # write all the images to a byte stream
     for i in imgs:
@@ -38,8 +38,8 @@ def respond_alphas():
 
     # add metadata for decoding
     for l in lens:
-        for b in l.to_bytes(2, byteorder='big')
-            blob.write(b)
+        for b in l.to_bytes(2, byteorder='big'):
+            blob.write(bytes([b]))
 
     return blob.getvalue()
 
