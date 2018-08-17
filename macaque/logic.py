@@ -19,7 +19,6 @@ class Model():
         self.alphas = []
 
     def generate_caption(self, rel_path):
-        # careful here
         self.input_image_path = rel_path
 
         img = single_image_for_imagenet(path=rel_path,
@@ -39,7 +38,7 @@ class Model():
 
     def get_result(self, rel_path):
         self.caption = self.generate_caption(rel_path)
-        self.alphas = get_dummy_alphas(500, 800, size=len(self.caption))
+        self.alphas = get_dummy_alphas(size=len(self.caption))
         return (self.caption, self.alphas)
 
     def get_result_images(self):
@@ -48,7 +47,7 @@ class Model():
 
         for alp in self.alphas:
             img = Image.fromarray(alp)
-            img = rescale_and_smooth(img, 1)
+            img = rescale_and_smooth(img)
             new = apply_attention_mask(ori, img)
             res.append(new)
 

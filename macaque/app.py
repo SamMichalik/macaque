@@ -19,9 +19,10 @@ def root():
 @APP.route('/caption', methods=['POST'])
 def upload():
     fname = request.files['input-file'].filename
-    request.files['input-file'].save('static/' + fname)
+    request.files['input-file'].save('static/' + fname + ".jpg")
     caption, alphas = APP.config['model'].get_result('static/' + fname)
     return json.dumps(caption)
+    #return json.dumps(["piggy", "ate", "a", "pie"])
 
 @APP.route('/alphas', methods=['GET'])
 def respond_alphas():
