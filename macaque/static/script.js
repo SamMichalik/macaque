@@ -3,8 +3,6 @@ var image = document.getElementById('image');
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
 var img = new Image();
-var imgX;
-var imgY;
 var focus = { x: 0, y: 0 };
 var mouseDown = false;
 var startX;
@@ -16,6 +14,9 @@ const MIN_WIDTH = 224;
 const MIN_HEIGHT = 224;
 const IN_WIDTH = MIN_WIDTH;
 const IN_HEIGHT = MIN_HEIGHT;
+
+const MAX_WIDTH = 1000;
+const MAX_HEIGHT = 800;
 
 
 initialize();
@@ -45,10 +46,6 @@ function initialize() {
 
   // make canvas visible and display the image selected by the user
   inFile.addEventListener('input', () => {
-    canvas.width = 1000;
-    canvas.height = 800;
-    focus.x = (canvas.width - IN_WIDTH) / 2;
-    focus.y = (canvas.height - IN_HEIGHT) / 2;
     canvas.style.display = "block";
     displayUserImage()
   });
@@ -140,6 +137,7 @@ function displayUserImage() {
   img.src = url;
   img.onload = () => {
     centerImg();
+    setFocusToCenter();
     drawFocus();
   }
 }
@@ -196,17 +194,17 @@ function centerImg() {
   var w = img.width;
   var h = img.height;
 
-  if (w > canvas.width || h > canvas.height) {
-    let x = canvas.width / w;
-    let y = canvas.height / h;
+  if (w > MAX_WIDTH || h > MAX_HEIGHT) {
+    let x = MAX_WIDTH / w;
+    let y = MAX_HEIGHT / h;
     let min = x < y ? x : y;
     w *= min;
     h *= min;
   }
 
-  imgX = (canvas.width - w) / 2;
-  imgY = (canvas.height - h) / 2;
-  ctx.drawImage(img, imgX, imgY, w, h);
+  canvas.width = w;
+  canvas.height = h;
+  ctx.drawImage(img, 0, 0, w, h);
 }
 
 function drawFocus() {
@@ -244,18 +242,18 @@ function canvasMouseMove(event) {
       let fx = focus.x;
       let fy = focus.y
 
-      if (fx + (sx - startX) < imgX) {
-        focus.x = imgX;
-      } else if (fx + (sx - startX) + IN_WIDTH > imgX + img.width) {
-        focus.x = canvas.width - imgX - IN_WIDTH;
+      if (fx + (sx - startX) < 0) {
+        focus.x = 0;
+      } else if (fx + (sx - startX) + IN_WIDTH > canvas.width) {
+        focus.x = canvas.width - IN_WIDTH;
       } else {
         focus.x += sx - startX;
       }
 
-      if (fy + (sy - startY) < imgY) {
-        focus.y = imgY;
-      } else if (fy + (sy - startY) + IN_HEIGHT > imgY + img.height) {
-        fy = canvas.height - imgY - IN_HEIGHT;
+      if (fy + (sy - startY) < 0) {
+        focus.y = 0;
+      } else if (fy + (sy - startY) + IN_HEIGHT > canvas.height) {
+        fy = canvas.height - IN_HEIGHT;
       } else {
         focus.y += sy - startY;
       }
@@ -276,11 +274,13 @@ function prezoom(event) {
 
 function zoom(event) {
 
-  // the condition prevents zooming on mouseclicks which resize the focus box
+  // the condition prevents zooming on mouseclicks which move the focus box
   if (event.screenX === zoomX && event.screenY === zoomY) {
     const c = 0.99;
     var w = img.width;
     var h = img.height;
+    var oldw = w;
+    var oldh = h;
     var floor = Math.floor;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -292,15 +292,26 @@ function zoom(event) {
         h = floor(h * c);
       }
     } else {
-      w = floor(w / c);
-      h = floor(h / c);
+      if (floor(w / c) <= MAX_WIDTH && floor(h / c) <= MAX_HEIGHT) {
+        w = floor(w / c);
+        h = floor(h / c);
+      }
     }
+
+    // lock focus box
+    focus.x += floor((w - oldw) / 2);
+    focus.y += floor((h - oldh) / 2);
 
     img.width = w;
     img.height = h;
-    imgX = (canvas.width - w) / 2;
-    imgY = (canvas.height - h) / 2;
-    ctx.drawImage(img, imgX, imgY, w, h);
+    canvas.width = w;
+    canvas.height = h;
+    ctx.drawImage(img, 0, 0, w, h);
     drawFocus();
   }
+}
+
+function setFocusToCenter() {
+  focus.x = (canvas.width - IN_WIDTH) / 2;
+  focus.y = (canvas.height - IN_HEIGHT) / 2;
 }
