@@ -24,15 +24,6 @@ function initialize() {
   var caption = getCaptionNodes();
   var form = document.querySelector('form');
 
-  focus.x = (canvas.width - IN_WIDTH) / 2;
-  focus.y = (canvas.height - IN_HEIGHT) / 2;
-
-  img.src = "static/japanese_macaque.jpg";
-  img.onload = () => {
-    centerImg();
-    drawFocus();
-  }
-
   // register canvas functionality
   canvas.addEventListener('mouseup', () => { canvasMouseUp(); });
   canvas.addEventListener('mouseup', event => { zoom(event); });
@@ -40,17 +31,29 @@ function initialize() {
   canvas.addEventListener('mousedown', event => { prezoom(event); });
   canvas.addEventListener('mousemove', event => { canvasMouseMove(event); });
 
+  // register effects on the caption subject to mouse movement
   caption.forEach(word => {
     word.addEventListener('mouseover', () => { highligthWord(word); });
     word.addEventListener('mouseout', () => { unhighlightWord(word); });
   });
 
-  // display the image selected by the user
-  inFile.addEventListener('change', displayImage);
+  // hide the default image and caption
+  inFile.addEventListener('input', () => {
+    image.style.display = "none";
+    hideCaption();
+   });
 
-  // hide the old caption when the image changes
-  inFile.addEventListener('change', hideCaption);
+  // make canvas visible and display the image selected by the user
+  inFile.addEventListener('input', () => {
+    canvas.width = 1000;
+    canvas.height = 800;
+    focus.x = (canvas.width - IN_WIDTH) / 2;
+    focus.y = (canvas.height - IN_HEIGHT) / 2;
+    canvas.style.display = "block";
+    displayUserImage()
+  });
 
+  // form submission event handler
   form.addEventListener('submit', event => {
     var hCanvas;
     var hCtx;
@@ -58,17 +61,23 @@ function initialize() {
     event.preventDefault();
 
     hCanvas = document.createElement('canvas');
-    hCanvas.setAttribute('width', IN_WIDTH);
-    hCanvas.setAttribute('height', IN_HEIGHT);
+    hCanvas.width = IN_WIDTH;
+    hCanvas.height = IN_HEIGHT;
     hCtx = hCanvas.getContext('2d');
 
     // redraw the contents of the focus box to the hidden canvas
     hCtx.drawImage(canvas, focus.x, focus.y, IN_WIDTH, IN_HEIGHT, 0, 0, IN_WIDTH, IN_HEIGHT);
 
+    let img_url = hCanvas.toDataURL("image/jpeg", 1.);
+    canvas.style.display = "none";
+    image.style.display = "block";
+    image.src = img_url;
+
     // submit the cropped image and handle the response
     hCanvas.toBlob(blob => { uploadBlob(blob); }, "image/jpeg", 1.);
 
     function uploadBlob(blob) {
+
       var formData = new FormData();
       formData.append('input-file', blob);
       var init = { method: 'POST', body: formData };
@@ -93,21 +102,19 @@ function initialize() {
 
         // fetch alphas
         fetchImages(length).then(urls => {
-          var url = img.src;
+          var url = image.getAttribute('src');
           var nodes = getCaptionNodes();
 
           for (var i = length-1; i >= 0; i--) {
             let ix = i;
 
             nodes[ix].addEventListener('mouseover', () => {
-              img.src = urls[ix];
-              centerImg();
+              image.setAttribute('src', urls[ix]);
               highligthWord(nodes[ix]);
             })
 
             nodes[ix].addEventListener('mouseout', () => {
-              img.src = url;
-              centerImg();
+              image.setAttribute('src', url)
               unhighlightWord(nodes[ix]);
             })
           }
@@ -126,7 +133,7 @@ function unhighlightWord(word) {
   word.style.color = "black";
 }
 
-function displayImage() {
+function displayUserImage() {
   var file = inFile.files[0];
   var url = URL.createObjectURL(file);
 
@@ -155,17 +162,22 @@ function fetchImages(imgCount) {
   }).then( arrBuff => {
 
     let bLen = arrBuff.byteLength;
+
     // 2 bytes to store the length of each image
     let metaLen = 2 * imgCount;
+
     // get a view of the metadata
     let dView = new DataView(arrBuff, bLen - metaLen);
+
     let view = new Uint8Array(arrBuff);
     let offset = 0;
     let imageURLs = new Array(imgCount);
 
     for (var i = 0; i < imgCount; i++) {
+
       // decode the length of the i-th image
       let l = dView.getUint16(i * 2, false);
+
       // extract the image
       let subArr = view.subarray(offset, offset + l);
       imageURLs[i] = URL.createObjectURL(new Blob([subArr]));
@@ -263,6 +275,8 @@ function prezoom(event) {
 }
 
 function zoom(event) {
+
+  // the condition prevents zooming on mouseclicks which resize the focus box
   if (event.screenX === zoomX && event.screenY === zoomY) {
     const c = 0.99;
     var w = img.width;
