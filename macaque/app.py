@@ -20,7 +20,7 @@ def root():
 def upload():
     fname = request.files['input-file'].filename
     request.files['input-file'].save('static/' + fname + ".jpg")
-    caption, alphas = APP.config['model'].get_result('static/' + fname)
+    caption, alphas = APP.config['model'].get_result('static/' + fname + ".jpg")
     return json.dumps(caption)
     #return json.dumps(["piggy", "ate", "a", "pie"])
 
@@ -30,7 +30,7 @@ def respond_alphas():
     blob = BytesIO()
     lens, prev = [], 0
 
-    # write all the images to a byte stream
+    # write all the images to a byte stream and store their sizes
     for i in imgs:
         i.save(blob, "JPEG")
         size = blob.tell() # total number of bytes
