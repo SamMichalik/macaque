@@ -50,6 +50,11 @@ function initialize() {
     displayUserImage()
   });
 
+  // display instructions for editing the user selected image
+  inFile.addEventListener('input', () => {
+    showUserInstructions();
+  });
+
   // form submission event handler
   form.addEventListener('submit', event => {
     var hCanvas;
@@ -119,8 +124,13 @@ function initialize() {
         });
       });
     }
+
+    // hide user instructions as they are no longer relevant
+    hideUserInstructions();
   });
+
 }
+
 
 function highligthWord(word) {
   word.style.color = "red";
@@ -314,4 +324,13 @@ function zoom(event) {
 function setFocusToCenter() {
   focus.x = (canvas.width - IN_WIDTH) / 2;
   focus.y = (canvas.height - IN_HEIGHT) / 2;
+}
+
+function showUserInstructions() {
+  document.getElementById('user-instructions').textContent = "Click on the\
+ image to zoom in. Shift-click to zoom out.\nDrag the square window to select the desired part of the image.";
+}
+
+function hideUserInstructions() {
+  document.getElementById('user-instructions').textContent = "";
 }
