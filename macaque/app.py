@@ -1,6 +1,6 @@
 import json
-from io import BytesIO
 
+from io import BytesIO
 from flask import Flask, render_template, request
 from logic import Model
 
