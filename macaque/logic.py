@@ -1,13 +1,11 @@
 import random
-
 import numpy as np
-#from skimage.transform import rescale
+
 from PIL import Image, ImageFilter
 from neuralmonkey.readers.image_reader import single_image_for_imagenet
 from neuralmonkey.experiment import Experiment
 from neuralmonkey.dataset import Dataset
 
-import matplotlib.pyplot as plt
 
 class Model():
     """This class serves as an interface to the Neural Monkey experiment"""
