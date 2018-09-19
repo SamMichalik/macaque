@@ -27,6 +27,11 @@ class Model():
         self.alphas = []
 
     def generate(self, rel_path):
+        """Computes the caption and the alphas, running the user's
+        image trough the model and returns them in a tuple
+        (caption, alphas)
+        """
+
         self.input_image_path = rel_path
 
         img = single_image_for_imagenet(path=rel_path,
@@ -52,12 +57,12 @@ class Model():
             print("Have you trained your model?")
             exit(1)
 
-    def get_result(self, rel_path):
-        self.caption = self.generate_caption(rel_path)
-        self.alphas = get_dummy_alphas(size=len(self.caption))
-        return (self.caption, self.alphas)
-
     def get_result_images(self):
+        """Returns a list containing PIL images
+        each visualizing the attention for a given
+        word in the caption.
+        """
+        
         res = []
         ori = Image.open(self.input_image_path)
 
@@ -91,6 +96,10 @@ def get_dummy_alphas(height=14, width=14, size=1):
     return res
 
 def rescale_and_smooth(pil_image, scale=29, smooth=True):
+    """Returns the original image rescaled
+    and smoothened by a Gaussian filter
+    """
+
     w = pil_image.width
     h = pil_image.height
     n_img = pil_image.resize((scale * w, scale * h))
@@ -98,6 +107,11 @@ def rescale_and_smooth(pil_image, scale=29, smooth=True):
     return n_img
 
 def apply_attention_mask(orig_pil_img, mask_pil_img, alpha_channel=0.8):
+    """Applies the attention mask to the original image by pasting it
+    on top with a selected alpha channel, thus visualizing the workings
+    of the model's attention component on the image.
+    """
+
     assert (orig_pil_img.height == mask_pil_img.height) and \
         (orig_pil_img.width == mask_pil_img.width)
     assert alpha_channel <= 1.
