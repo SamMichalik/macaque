@@ -11,21 +11,31 @@ APP.config['model'] = None
 
 @APP.route('/', methods=['GET'])
 def root():
-    caption = APP.config['model'].generate_caption('static/japanese_macaque.jpg')
+    """Returns the main page with the default image and its caption."""
+
+    caption, _ = APP.config['model'].generate('static/japanese_macaque.jpg')
     image = "/static/japanese_macaque.jpg"
     alt = "A Japanese Macaque in a hot spring."
     return render_template('root.html', caption=caption, image=image, alt=alt)
 
 @APP.route('/caption', methods=['POST'])
 def upload():
+    """Processes the input image file sent by the user
+    computing and storing both the caption and the alpha values.
+    Returns the caption as jsonified array.
+    """
+
     fname = request.files['input-file'].filename
     request.files['input-file'].save('static/' + fname + ".jpg")
-    caption, alphas = APP.config['model'].get_result('static/' + fname + ".jpg")
+    caption, alphas = APP.config['model'].generate('static/' + fname + ".jpg")
     return json.dumps(caption)
-    #return json.dumps(["piggy", "ate", "a", "pie"])
 
 @APP.route('/alphas', methods=['GET'])
 def respond_alphas():
+    """Returns the images visualizing the effect of the attention
+    mechanism and additional metadata for decoding in a blob.
+    """
+
     imgs = APP.config['model'].get_result_images()
     blob = BytesIO()
     lens, prev = [], 0
