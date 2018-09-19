@@ -10,6 +10,7 @@ from neuralmonkey.dataset import Dataset
 import matplotlib.pyplot as plt
 
 class Model():
+    """This class serves as an interface to the Neural Monkey experiment"""
 
     def __init__(self):
         # initialize Resnet encoder
@@ -62,7 +63,7 @@ class Model():
         each visualizing the attention for a given
         word in the caption.
         """
-        
+
         res = []
         ori = Image.open(self.input_image_path)
 
