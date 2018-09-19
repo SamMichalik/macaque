@@ -42,13 +42,17 @@ class Model():
         dataset = Dataset("test", data, {})
 
         try:
-            features = self.encoder.run_model(dataset, write_out=False)[1]["resnet_features"]
+            # extract the feature representation of the image
+            enc_out = self.encoder.run_model(dataset, write_out=False)
+            features = enc_out[1]["resnet_features"]
+
+            # generate the caption and extract the alpha values
             data = { "images": features }
             dataset = Dataset("test", data, {})
             _, output = self.exp.run_model(dataset, write_out=False)
+            w_count = output["alpha"][0].shape[1] # including the <EOS> token
             self.caption = output["target"][0]
-            w_count = output["alpha"][0].shape[1]
-            self.alphas = output["alpha"][0].transpose()
+            self.alphas = output["alpha"][0].transpose() # new shape is (w_count, 64)
             self.alphas = self.alphas.reshape((w_count, 8, 8))
             return (self.caption, self.alphas)
         except RuntimeError as rerr:
