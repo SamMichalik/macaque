@@ -5,32 +5,48 @@ import numpy as np
 from PIL import Image, ImageFilter
 from neuralmonkey.readers.image_reader import single_image_for_imagenet
 from neuralmonkey.experiment import Experiment
-from neuralmonkey.dataset.dataset import Dataset
+from neuralmonkey.dataset import Dataset
 
 import matplotlib.pyplot as plt
 
 class Model():
 
     def __init__(self):
-        self.exp = Experiment(config_path='../models/captioning_1.ini')
+        # initialize Resnet encoder
+        self.encoder = Experiment(config_path='../models/resnet/experiment.ini')
+        self.encoder.build_model()
+        self.encoder.load_variables(['../models/resnet/variables.data'])
+
+        # initialize decoder
+        self.exp = Experiment(config_path='../models/captioning_en_multiref_bigger/experiment.ini')
         self.exp.build_model()
+        self.exp.load_variables(['../models/captioning_en_multiref_bigger/variables.data.avg-0'])
+
         self.input_image_path = ""
         self.caption = []
         self.alphas = []
 
-    def generate_caption(self, rel_path):
+    def generate(self, rel_path):
         self.input_image_path = rel_path
 
         img = single_image_for_imagenet(path=rel_path,
-                                        target_width=224,
-                                        target_height=224,
-                                        vgg_normalization=True,
-                                        zero_one_normalization=False)
+                                        target_width=229,
+                                        target_height=229,
+                                        vgg_normalization=False,
+                                        zero_one_normalization=True)
         data = { "images" : [img] }
         dataset = Dataset("test", data, {})
+
         try:
+            features = self.encoder.run_model(dataset, write_out=False)[1]["resnet_features"]
+            data = { "images": features }
+            dataset = Dataset("test", data, {})
             _, output = self.exp.run_model(dataset, write_out=False)
-            return output["target"][0]
+            self.caption = output["target"][0]
+            w_count = output["alpha"][0].shape[1]
+            self.alphas = output["alpha"][0].transpose()
+            self.alphas = self.alphas.reshape((w_count, 8, 8))
+            return (self.caption, self.alphas)
         except RuntimeError as rerr:
             print(rerr)
             print("Have you trained your model?")
@@ -46,12 +62,15 @@ class Model():
         ori = Image.open(self.input_image_path)
 
         for alp in self.alphas:
+            alp = alp * 10000#00
             img = Image.fromarray(alp)
+            img = img.convert("L")
             img = rescale_and_smooth(img)
             new = apply_attention_mask(ori, img)
             res.append(new)
 
-        return res
+        # omit the end-of-sequence corresponding image
+        return res[:-1]
 
 def get_dummy_alphas(height=14, width=14, size=1):
     res = np.zeros((size, height, width), dtype=np.uint8)
@@ -71,11 +90,11 @@ def get_dummy_alphas(height=14, width=14, size=1):
 
     return res
 
-def rescale_and_smooth(pil_image, scale=16, smooth=True):
+def rescale_and_smooth(pil_image, scale=29, smooth=True):
     w = pil_image.width
     h = pil_image.height
     n_img = pil_image.resize((scale * w, scale * h))
-    n_img = n_img.filter(ImageFilter.GaussianBlur(5))
+    n_img = n_img.filter(ImageFilter.GaussianBlur(10))
     return n_img
 
 def apply_attention_mask(orig_pil_img, mask_pil_img, alpha_channel=0.8):
