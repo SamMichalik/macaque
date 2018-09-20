@@ -54,6 +54,14 @@ def respond_alphas():
 
     return blob.getvalue()
 
+@APP.route('/alpha_values', methods=['GET'])
+def respond_alpha_values():
+    """Returns a jsonified numpy array containing the
+    values of the alpha parameters.
+    """
+
+    return json.dumps(APP.config['model'].alphas.tolist())
+
 
 if __name__ == "__main__":
     model = Model()
