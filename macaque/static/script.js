@@ -192,28 +192,6 @@ function initialize() {
 
 }
 
-/*
-function displayAllAlphas(button) {
-  let parent = button.parentElement;
-  let imgs = [];
-
-  for (var i = 0; i < caption.length; i++) {
-    imgs[i] = document.createElement('img');
-    imgs[i].src = alphaUrls[i];
-    document.body.appendChild(imgs[i]);
-  }
-
-  button.textContent = "Hide";
-  button.onclick = () => {
-    button.textContent = "Unroll";
-    for (var i = caption.length-1; i <= 0; i--) {
-      imgs[i].parentNode.removeChild(imgs[i]); // doesn't work
-    }
-  };
-
-}
-*/
-
 function highligthWord(word) {
   word.style.color = "red";
 }
@@ -441,7 +419,9 @@ function unroll() {
     }
 
     img.onmouseout = event => {
-      document.body.removeChild(document.getElementsByClassName('tooltip')[0]);
+      if (document.getElementsByClassName('tooltip')[0]) {
+        document.body.removeChild(document.getElementsByClassName('tooltip')[0]);
+      }
     }
   }
 
