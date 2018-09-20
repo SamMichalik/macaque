@@ -12,21 +12,36 @@
       <h1>Macaque</h1>
       <h3>A modest app for visualizing neural net inference</h3>
       <hr/>
-      <img id="image" src="{{ image }}" alt="{{ alt }}" class="center">
-      <canvas id="canvas" width="0" height="0">
-      </canvas>
-      <table class="center">
-        <tr class="caption">
-          {% for word in caption %}
-            <th class="caption">{{ word }}</th>
-          {% endfor %}
-        </tr>
-      </table>
-      <form method="post" enctype="multipart/form-data">
-        <input id="inFile" type="file" name="input-file" accept=".jpg">
-        <input type="submit" value="Caption">
-      </form>
-      <pre id="user-instructions"></pre>
+
+      <div>
+        <img id="image" src="{{ image }}" alt="{{ alt }}" class="center">
+        <canvas id="canvas" width="0" height="0">
+        </canvas>
+        <table class="center">
+          <tr class="caption">
+            {% for word in caption %}
+              <th class="caption">{{ word }}</th>
+            {% endfor %}
+          </tr>
+        </table>
+        <form method="post" enctype="multipart/form-data">
+          <input id="inFile" type="file" name="input-file" accept=".jpg">
+          <input type="submit" value="Caption">
+        </form>
+        <pre id="user-instructions"></pre>
+      </div>
+      
+    </div>
+
+    <div class="hideable" hidden>
+      <button id="unroll-button" type="button">Unroll</button>
+    </div>
+
+    <div class="bottom-div hideable" hidden>
+
+      <div id="one-by-one-div" class="hideable" style="text-align:center;" hidden>
+      </div>
+
     </div>
 
   </body>
