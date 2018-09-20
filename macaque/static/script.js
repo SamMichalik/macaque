@@ -426,28 +426,18 @@ function unroll() {
     var ndiv = document.createElement('div');
     var p = document.createElement('p');
     var b = document.createElement('b');    // bold tag
-    var idx = i;
-
-//    var tooltip = document.createElement('span');
-//    tooltip.className = "tooltip";
-    //ndiv.appendChild(tooltip);
 
     ndiv.className = "padded-div";
     b.textContent = caption[i];     // make caption bold
     p.appendChild(b);               // embed the boldened caption into a paragraph
     img.src = alphaUrls[i];
+    img.wordNum = i;            // we need to store the word index for later events
     ndiv.appendChild(img);
     ndiv.appendChild(p);
     div.appendChild(ndiv);
 
-
     img.onmousemove = event => {
-      showAlphaTooltip(event, idx);
-
-      //var tooltip = document.getElementsByClassName('tooltip')[0];
-
-      //tooltip.style.top = event.clientY + 'px';
-      //tooltip.style.left = event.clientX + 'px';
+      showAlphaTooltip(event);
     }
 
     img.onmouseout = event => {
@@ -485,7 +475,7 @@ function showAlphaTooltip(event, wordNum) {
   var unitY = MIN_HEIGHT / 8;
   var column = Math.floor((clientX - domRect.x) / unitX);
   var row = Math.floor((clientY - domRect.y) / unitY);
-  var value = alphaValues[wordNum][row][column];
+  var value = alphaValues[event.target.wordNum][row][column];
   var tooltip;
 
   // remove the image title to prevent collisions with the tooltip
