@@ -3,6 +3,33 @@
   margin-right: auto;
 }
 
+.bottom-div {
+  margin-left: 150px;
+  margin-right: 150px;
+  border: 5px solid black;
+  border-radius: 10px;
+}
+
+.padded-div {
+  padding-left: 30px;
+  padding-right: 30px;
+  padding-top: 30px;
+  padding-bottom: 45px;
+  height: 232px;
+  width: 232px;
+  display: inline-block;
+}
+
+.tooltip {
+	position:absolute;
+	border:1px solid #333;
+	background-color:#161616;
+	border-radius:5px;
+	padding:10px;
+	color:#fff;
+	font-size:12px Arial;
+}
+
 canvas {
     margin-left: auto;
     margin-right: auto;
