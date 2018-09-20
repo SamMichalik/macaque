@@ -1,3 +1,5 @@
+/*jshint esversion: 6 */
+
 var inFile = document.getElementById('inFile');
 var image = document.getElementById('image');
 var canvas = document.getElementById('canvas');
@@ -9,9 +11,12 @@ var startX;
 var startY;
 var zoomX;
 var zoomY;
+var alphaUrls;
+var caption;
+var alphaValues;
 
-const MIN_WIDTH = 224;
-const MIN_HEIGHT = 224;
+const MIN_WIDTH = 232;
+const MIN_HEIGHT = 232;
 const IN_WIDTH = MIN_WIDTH;
 const IN_HEIGHT = MIN_HEIGHT;
 
@@ -22,7 +27,7 @@ const MAX_HEIGHT = 800;
 initialize();
 
 function initialize() {
-  var caption = getCaptionNodes();
+  var captionNodes = getCaptionNodes();
   var form = document.querySelector('form');
 
   // register canvas functionality
@@ -33,7 +38,7 @@ function initialize() {
   canvas.addEventListener('mousemove', event => { canvasMouseMove(event); });
 
   // register effects on the caption subject to mouse movement
-  caption.forEach(word => {
+  captionNodes.forEach(word => {
     word.addEventListener('mouseover', () => { highligthWord(word); });
     word.addEventListener('mouseout', () => { unhighlightWord(word); });
   });
@@ -47,7 +52,7 @@ function initialize() {
   // make canvas visible and display the image selected by the user
   inFile.addEventListener('input', () => {
     canvas.style.display = "block";
-    displayUserImage()
+    displayUserImage();
   });
 
   // display instructions for editing the user selected image
@@ -55,13 +60,27 @@ function initialize() {
     showUserInstructions();
   });
 
+  // routine to be run when a new image is input by the user
+  inFile.addEventListener('input', () => {
+    var hideables = document.getElementsByClassName('hideable');
+    for (var i = 0; i < hideables.length; i++) {
+      hideables[i].hidden = true;
+    }
+  });
+
+  document.getElementById('unroll-button').onclick = () => {
+    unroll();
+  }
+
   // form submission event handler
   form.addEventListener('submit', event => {
     var hCanvas;
     var hCtx;
+    var div;
 
     event.preventDefault();
 
+    // set up a hidden canvas
     hCanvas = document.createElement('canvas');
     hCanvas.width = IN_WIDTH;
     hCanvas.height = IN_HEIGHT;
@@ -70,14 +89,15 @@ function initialize() {
     // redraw the contents of the focus box to the hidden canvas
     hCtx.drawImage(canvas, focus.x, focus.y, IN_WIDTH, IN_HEIGHT, 0, 0, IN_WIDTH, IN_HEIGHT);
 
-    let img_url = hCanvas.toDataURL("image/jpeg", 1.);
+    let img_url = hCanvas.toDataURL("image/jpeg", 1.0);
     canvas.style.display = "none";
     image.style.display = "block";
     image.src = img_url;
 
     // submit the cropped image and handle the response
-    hCanvas.toBlob(blob => { uploadBlob(blob); }, "image/jpeg", 1.);
+    hCanvas.toBlob(blob => { uploadBlob(blob); }, "image/jpeg", 1.0);
 
+    // this function is responsible for uploading the user's image to the server
     function uploadBlob(blob) {
 
       var formData = new FormData();
@@ -87,7 +107,11 @@ function initialize() {
       // '/caption' responds with a json containing the generated caption
       fetch('/caption', init).then(response => {
         return response.json();
-      }).then(json => {
+      })
+      .then(json => {
+
+        // store the caption to the global variable 'caption'
+        caption = json;
 
         var tr = document.querySelector('tr.caption'),
             length = json.length,
@@ -110,27 +134,85 @@ function initialize() {
           for (var i = length-1; i >= 0; i--) {
             let ix = i;
 
+            // register callbacks for word highlighting & image switching on
+            // mouse hoovering over the given word
             nodes[ix].addEventListener('mouseover', () => {
               image.setAttribute('src', urls[ix]);
               highligthWord(nodes[ix]);
-            })
+            });
 
+            // analogously, add callbacks for when the mouse leaves the word
             nodes[ix].addEventListener('mouseout', () => {
-              image.setAttribute('src', url)
+              image.setAttribute('src', url);
               unhighlightWord(nodes[ix]);
-            })
+            });
           }
 
+          // store the urls to the global variable alphaUrls
+          alphaUrls = urls;
+        })
+        .then(() => {
+          if (document.getElementById('unroll-button').textContent === "Hide") {
+            // refresh, thus updating to the new image
+            hideUnrolled();
+            unroll();
+          }
+        })
+        .then(() => {
+          fetch('alpha_values').then(response => {
+            return response.json();
+          })
+          .then(json => {
+            // json contains a multidimensional array corresponding to
+            // the original tensor of parameters
+            // store the values to the global variable alphaValues
+            alphaValues = json;
+          });
         });
+
       });
     }
 
     // hide user instructions as they are no longer relevant
     hideUserInstructions();
+
+
+  });
+
+  // display hidden elements relevant when the caption has been displayed
+  form.addEventListener('submit', () => {
+    var hideables = document.getElementsByClassName('hideable');
+    var button = document.getElementById('unroll-button');
+
+    for (var i = 0; i < hideables.length; i++) {
+      hideables[i].hidden = false;
+    }
+
   });
 
 }
 
+/*
+function displayAllAlphas(button) {
+  let parent = button.parentElement;
+  let imgs = [];
+
+  for (var i = 0; i < caption.length; i++) {
+    imgs[i] = document.createElement('img');
+    imgs[i].src = alphaUrls[i];
+    document.body.appendChild(imgs[i]);
+  }
+
+  button.textContent = "Hide";
+  button.onclick = () => {
+    button.textContent = "Unroll";
+    for (var i = caption.length-1; i <= 0; i--) {
+      imgs[i].parentNode.removeChild(imgs[i]); // doesn't work
+    }
+  };
+
+}
+*/
 
 function highligthWord(word) {
   word.style.color = "red";
@@ -144,12 +226,12 @@ function displayUserImage() {
   var file = inFile.files[0];
   var url = URL.createObjectURL(file);
 
-  img.src = url;
   img.onload = () => {
     centerImg();
     setFocusToCenter();
     drawFocus();
-  }
+  };
+  img.src = url;
 }
 
 function hideCaption() {
@@ -166,8 +248,8 @@ function fetchImages(imgCount) {
   return fetch('/alphas')
   .then(response => {
     return response.arrayBuffer();
-
-  }).then( arrBuff => {
+  })
+  .then( arrBuff => {
 
     let bLen = arrBuff.byteLength;
 
@@ -201,8 +283,8 @@ function getCaptionNodes() {
 }
 
 function centerImg() {
-  var w = img.width;
-  var h = img.height;
+  var w = img.naturalWidth; // original image width
+  var h = img.naturalHeight;
 
   if (w > MAX_WIDTH || h > MAX_HEIGHT) {
     let x = MAX_WIDTH / w;
@@ -242,15 +324,15 @@ function canvasMouseDown(event) {
 
 function canvasMouseMove(event) {
   if (mouseDown) {
-    if (event.offsetX >= focus.x
-      && event.offsetX <= focus.x + IN_WIDTH
-      && event.offsetY >= focus.y
-      && event.offsetY <= focus.y + IN_HEIGHT)
+    if (event.offsetX >= focus.x &&
+      event.offsetX <= focus.x + IN_WIDTH &&
+      event.offsetY >= focus.y &&
+      event.offsetY <= focus.y + IN_HEIGHT)
     {
       let sx = event.screenX;
       let sy = event.screenY;
       let fx = focus.x;
-      let fy = focus.y
+      let fy = focus.y;
 
       if (fx + (sx - startX) < 0) {
         focus.x = 0;
@@ -327,10 +409,98 @@ function setFocusToCenter() {
 }
 
 function showUserInstructions() {
-  document.getElementById('user-instructions').textContent = "Click on the\
- image to zoom in. Shift-click to zoom out.\nDrag the square window to select the desired part of the image.";
+  document.getElementById('user-instructions').textContent = "Click on the \
+image to zoom in. Shift-click to zoom out.\nDrag the square window to select the desired part of the image.";
 }
 
 function hideUserInstructions() {
   document.getElementById('user-instructions').textContent = "";
+}
+
+function unroll() {
+  var div = document.getElementById('one-by-one-div');
+  var button = document.getElementById('unroll-button');
+
+  for (var i = 0; i < caption.length; i++) {
+    var img = document.createElement('img');
+    var ndiv = document.createElement('div');
+    var p = document.createElement('p');
+    var b = document.createElement('b');    // bold tag
+    var idx = i;
+
+//    var tooltip = document.createElement('span');
+//    tooltip.className = "tooltip";
+    //ndiv.appendChild(tooltip);
+
+    ndiv.className = "padded-div";
+    b.textContent = caption[i];     // make caption bold
+    p.appendChild(b);               // embed the boldened caption into a paragraph
+    img.src = alphaUrls[i];
+    ndiv.appendChild(img);
+    ndiv.appendChild(p);
+    div.appendChild(ndiv);
+
+
+    img.onmousemove = event => {
+      showAlphaTooltip(event, idx);
+
+      //var tooltip = document.getElementsByClassName('tooltip')[0];
+
+      //tooltip.style.top = event.clientY + 'px';
+      //tooltip.style.left = event.clientX + 'px';
+    }
+
+    img.onmouseout = event => {
+      document.body.removeChild(document.getElementsByClassName('tooltip')[0]);
+    }
+  }
+
+  // reuse the same button for switching states (unrolled / hidden)
+  button.onclick = () => {
+    hideUnrolled();
+  }
+  button.textContent = "Hide";
+}
+
+function hideUnrolled() {
+  var div = document.getElementById('one-by-one-div');
+  var button = document.getElementById('unroll-button');
+
+  while (div.firstChild) {
+    div.removeChild(div.firstChild);
+  }
+
+  // reuse the same button for switching states (unrolled / hidden)
+  button.onclick = () => {
+    unroll();
+  }
+  button.textContent = "Unroll";
+}
+
+function showAlphaTooltip(event, wordNum) {
+  var clientX = event.clientX;
+  var clientY = event.clientY;
+  var domRect = event.target.getBoundingClientRect();
+  var unitX = MIN_WIDTH / 8; //features are of shape (8,8)
+  var unitY = MIN_HEIGHT / 8;
+  var column = Math.floor((clientX - domRect.x) / unitX);
+  var row = Math.floor((clientY - domRect.y) / unitY);
+  var value = alphaValues[wordNum][row][column];
+  var tooltip;
+
+  // remove the image title to prevent collisions with the tooltip
+  event.target.removeAttribute('title');
+
+  //remove existing tooltip
+  if (document.getElementsByClassName('tooltip')[0]) {
+    document.body.removeChild(document.getElementsByClassName('tooltip')[0]);
+  }
+
+  // create new tooltip
+  tooltip = document.createElement('p');
+  tooltip.className = 'tooltip';
+  tooltip.textContent = value;
+  document.body.appendChild(tooltip);
+  tooltip.style.top = event.pageY + 'px';
+  tooltip.style.left = event.pageX + 'px';
 }
