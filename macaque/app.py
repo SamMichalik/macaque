@@ -3,6 +3,7 @@ import json
 from io import BytesIO
 from flask import Flask, render_template, request
 from logic import Model
+from neuralmonkey.beamsearch_output_graph import BeamSearchOutputGraphEncoder
 
 
 APP = Flask(__name__)
@@ -56,12 +57,18 @@ def respond_alphas():
 
 @APP.route('/alpha_values', methods=['GET'])
 def respond_alpha_values():
-    """Returns a jsonified numpy array containing the
-    values of the alpha parameters.
+    """Returns a jsonified list of numpy arrays containing
+    the values of the alpha parameters.
     """
 
-    return json.dumps(APP.config['model'].alphas.tolist())
+    alphas = APP.config['model'].alphas
+    alphas = [a.tolist() for a in alphas]
+    return json.dumps(alphas)
 
+@APP.route('/bs_graph', methods=['GET'])
+def respond_beam_search_graph():
+    graph = APP.config['model'].beam_search_graph
+    return json.dumps(graph, cls=BeamSearchOutputGraphEncoder)
 
 if __name__ == "__main__":
     model = Model()
