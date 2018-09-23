@@ -6,24 +6,40 @@ from neuralmonkey.readers.image_reader import single_image_for_imagenet
 from neuralmonkey.experiment import Experiment
 from neuralmonkey.dataset import Dataset
 
+import pdb
+import json
+from neuralmonkey.beamsearch_output_graph import BeamSearchOutputGraphEncoder
 
 class Model():
     """This class serves as an interface to the Neural Monkey experiment"""
 
     def __init__(self):
         # initialize Resnet encoder
-        self.encoder = Experiment(config_path='../models/resnet/experiment.ini')
-        self.encoder.build_model()
-        self.encoder.load_variables(['../models/resnet/variables.data'])
+        self._encoder = Experiment(config_path='../models/resnet/experiment.ini')
+        self._encoder.build_model()
+        self._encoder.load_variables(['../models/resnet/variables.data'])
 
         # initialize decoder
-        self.exp = Experiment(config_path='../models/captioning_en_multiref_bigger/experiment.ini')
-        self.exp.build_model()
-        self.exp.load_variables(['../models/captioning_en_multiref_bigger/variables.data.avg-0'])
+        self._exp = Experiment(config_path='../models/captioning_en_multiref_bigger/experiment.ini')
+        self._exp.build_model()
+        self._exp.load_variables(['../models/captioning_en_multiref_bigger/variables.data.avg-0'])
 
-        self.input_image_path = ""
-        self.caption = []
-        self.alphas = []
+        self._input_image_path = ""
+        self._caption = []
+        self._alphas = []
+        self._beam_search_graph = None
+
+    @property
+    def alphas(self):
+        return self._alphas
+
+    @property
+    def caption(self):
+        return self._caption
+
+    @property
+    def beam_search_graph(self):
+        return self._beam_search_graph
 
     def generate(self, rel_path):
         """Computes the caption and the alphas, running the user's
@@ -31,7 +47,7 @@ class Model():
         (caption, alphas)
         """
 
-        self.input_image_path = rel_path
+        self._input_image_path = rel_path
 
         img = single_image_for_imagenet(path=rel_path,
                                         target_width=229,
@@ -43,18 +59,27 @@ class Model():
 
         try:
             # extract the feature representation of the image
-            enc_out = self.encoder.run_model(dataset, write_out=False)
+            enc_out = self._encoder.run_model(dataset, write_out=False)
             features = enc_out[1]["resnet_features"]
 
             # generate the caption and extract the alpha values
             data = { "images": features }
             dataset = Dataset("test", data, {})
-            _, output = self.exp.run_model(dataset, write_out=False)
-            w_count = output["alpha"][0].shape[1] # including the <EOS> token
-            self.caption = output["target"][0]
-            self.alphas = output["alpha"][0].transpose() # new shape is (w_count, 64)
-            self.alphas = self.alphas.reshape((w_count, 8, 8))
-            return (self.caption, self.alphas)
+            _, output = self._exp.run_model(dataset, write_out=False)
+
+            bs_graph = output["bswa_target"][0]
+            hyps = bs_graph.collect_hypotheses()
+            #json.dumps(bs_graph, cls=BeamSearchOutputGraphEncoder)
+            self._caption = hyps["tokens"][0]
+
+            w_count = len(hyps["alignments"][0])
+
+            self._alphas = hyps["alignments"][0]
+            self._alphas = [alph.reshape((8, 8)) for alph in self._alphas]
+
+            self._beam_search_graph = bs_graph
+
+            return (self._caption, self._alphas)
         except RuntimeError as rerr:
             print(rerr)
             print("Have you trained your model?")
@@ -67,9 +92,9 @@ class Model():
         """
 
         res = []
-        ori = Image.open(self.input_image_path)
+        ori = Image.open(self._input_image_path)
 
-        for alp in self.alphas:
+        for alp in self._alphas:
             alp = alp * 10000#00
             img = Image.fromarray(alp)
             img = img.convert("L")
@@ -77,8 +102,7 @@ class Model():
             new = apply_attention_mask(ori, img)
             res.append(new)
 
-        # omit the end-of-sequence corresponding image
-        return res[:-1]
+        return res
 
 def get_dummy_alphas(height=14, width=14, size=1):
     res = np.zeros((size, height, width), dtype=np.uint8)
