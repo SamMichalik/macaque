@@ -40,14 +40,6 @@ function initialize() {
   canvas.addEventListener('mousedown', event => { prezoom(event); });
   canvas.addEventListener('mousemove', event => { canvasMouseMove(event); });
 
-/*
-  // register effects on the caption subject to mouse movement
-  captionNodes.forEach(word => {
-    word.addEventListener('mouseover', () => { highligthWord(word); });
-    word.addEventListener('mouseout', () => { unhighlightWord(word); });
-  });
-*/
-
   // register functionality that should occur when the user inputs an image
   inFile.addEventListener('input', () => {
     // hide the default image and caption
@@ -72,9 +64,9 @@ function initialize() {
     while ((child = svg.lastElementChild) !== null) {
       svg.removeChild(child);
     }
-
+    // hide the 'Browse' button
     inFile.hidden = true;
-
+    // display the 'Caption' button
     document.getElementById('caption-button').hidden = false;
   });
 
@@ -214,7 +206,7 @@ function initialize() {
         })
         .then(json => {
           var width = window.innerWidth - 200;
-          var height = (3 * window.innerHeight / 4) - 40;
+          var height = window.innerHeight - 40; // (3 * window.innerHeight / 4) worked quite well
           graph = json;
 
           d3Tree = d3.layout.tree()
@@ -232,12 +224,8 @@ function initialize() {
 
   // display hidden elements relevant when the caption has been displayed
   form.addEventListener('submit', () => {
-    var hideables = document.getElementsByClassName('hideable');
-    var button = document.getElementById('unroll-button');
-
-    for (var i = 0; i < hideables.length; i++) {
-      hideables[i].hidden = false;
-    }
+    document.getElementById('unroll-div').hidden = false;
+    document.getElementById('one-by-one-div').hidden = false;
   });
 
 }
@@ -450,6 +438,9 @@ function hideUserInstructions() {
 function unroll() {
   var div = document.getElementById('one-by-one-div');
   var button = document.getElementById('unroll-button');
+  var div2 = document.getElementById('bottom-div');
+
+  div2.hidden = false;
 
   for (var i = 0; i < caption.length; i++) {
     var img = document.createElement('img');
@@ -487,10 +478,13 @@ function unroll() {
 function hideUnrolled() {
   var div = document.getElementById('one-by-one-div');
   var button = document.getElementById('unroll-button');
+  var div2 = document.getElementById('bottom-div');
 
   while (div.firstChild) {
     div.removeChild(div.firstChild);
   }
+
+  div2.hidden = true;
 
   // reuse the same button for switching states (unrolled / hidden)
   button.onclick = () => {
@@ -530,7 +524,7 @@ function showAlphaTooltip(event, wordNum) {
 function graph_update(root) {
   var svg = d3.select("svg")
   .attr("width", window.innerWidth)
-  .attr("height", 3 * window.innerHeight / 4)
+  .attr("height", window.innerHeight) // 3 * window.innerHeight / 4
   .append("g") // <g> is a container for grouping of SVG elements
   .attr("transform", "translate(" + 100 + "," + 20 + ")");
 
