@@ -1,10 +1,12 @@
 import json
+import numpy as np
 
 from io import BytesIO
 from flask import Flask, render_template, request
 from logic import Model
 from neuralmonkey.beamsearch_output_graph import BeamSearchOutputGraphEncoder
 
+import pdb
 
 APP = Flask(__name__)
 APP.config['model'] = None
@@ -19,6 +21,7 @@ def root():
     alt = "A Japanese Macaque in a hot spring."
     return render_template('root.html', caption=caption, image=image, alt=alt)
 
+
 @APP.route('/caption', methods=['POST'])
 def upload():
     """Processes the input image file sent by the user
@@ -30,6 +33,7 @@ def upload():
     request.files['input-file'].save('static/' + fname + ".jpg")
     caption, alphas = APP.config['model'].generate('static/' + fname + ".jpg")
     return json.dumps(caption)
+
 
 @APP.route('/alphas', methods=['GET'])
 def respond_alphas():
@@ -55,6 +59,7 @@ def respond_alphas():
 
     return blob.getvalue()
 
+
 @APP.route('/alpha_values', methods=['GET'])
 def respond_alpha_values():
     """Returns a jsonified list of numpy arrays containing
@@ -65,10 +70,27 @@ def respond_alpha_values():
     alphas = [a.tolist() for a in alphas]
     return json.dumps(alphas)
 
+
 @APP.route('/bs_graph', methods=['GET'])
 def respond_beam_search_graph():
+    """Returns a json encoded BeamSearchOutputGraph object"""
+
     graph = APP.config['model'].beam_search_graph
     return json.dumps(graph, cls=BeamSearchOutputGraphEncoder)
+
+
+@APP.route('/single_alpha', methods=['POST'])
+def respond_single_alpha():
+    json_data = request.get_json(force=True)
+
+    narr = np.array(json_data)
+    narr = narr.reshape((8,8))
+    imgs = APP.config['model'].get_result_images([narr])
+    blob = BytesIO()
+    imgs[0].save(blob, "JPEG")
+
+    return blob.getvalue()
+
 
 if __name__ == "__main__":
     model = Model()
