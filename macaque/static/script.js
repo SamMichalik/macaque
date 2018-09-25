@@ -74,7 +74,7 @@ function initialize() {
     unroll();
   }
 
-  // form submission event handler
+  // form submission event handler; runs everytime the user submits an image
   form.addEventListener('submit', event => {
     var hCanvas;
     var hCtx;
@@ -105,6 +105,9 @@ function initialize() {
     // display the cropped image inside a <img> tag
     image.style.display = "block";
     image.src = img_url;
+    // release the image from the previous holder
+    image.locked = false;
+    image.holder = undefined;
 
     // submit the cropped image and handle the response
     hCanvas.toBlob(blob => { uploadBlob(blob); }, "image/jpeg", 1.0);
@@ -369,7 +372,7 @@ function canvasMouseMove(event) {
       }
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      centerImg();
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       drawFocus();
       startX = sx;
       startY = sy;
@@ -387,8 +390,8 @@ function zoom(event) {
   // the condition prevents zooming on mouseclicks which move the focus box
   if (event.screenX === zoomX && event.screenY === zoomY) {
     const c = 0.99;
-    var w = img.width;
-    var h = img.height;
+    var w = canvas.width;
+    var h = canvas.height;
     var oldw = w;
     var oldh = h;
     var floor = Math.floor;
