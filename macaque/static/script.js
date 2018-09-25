@@ -568,8 +568,8 @@ function graph_update(root) {
     .attr("height", 40)
     .attr("x", -32)
     .attr("y", -20)
-    .attr("rx", 4)
-    .attr("ry", 4);
+    .attr("rx", 9)
+    .attr("ry", 9);
 
   nodeEnter.append("line")
     .attr("x1", -32)

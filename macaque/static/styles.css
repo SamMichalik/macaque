@@ -48,12 +48,12 @@ canvas {
 
 .node rect {
   fill: #fff;
-  stroke: #ac4142;
+  stroke: #5081C1;
   stroke-width: 3px;
 }
 
 .node line {
-  stroke: #ac4142;
+  stroke: #5081C1;
   stroke-width: 3px;
 }
 
