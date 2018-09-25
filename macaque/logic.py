@@ -69,7 +69,7 @@ class Model():
 
             bs_graph = output["bswa_target"][0]
             hyps = bs_graph.collect_hypotheses()
-            #json.dumps(bs_graph, cls=BeamSearchOutputGraphEncoder)
+
             self._caption = hyps["tokens"][0]
 
             w_count = len(hyps["alignments"][0])
@@ -85,16 +85,19 @@ class Model():
             print("Have you trained your model?")
             exit(1)
 
-    def get_result_images(self):
+    def get_result_images(self, alphas=None):
         """Returns a list containing PIL images
         each visualizing the attention for a given
         word in the caption.
         """
 
+        if alphas is None:
+            alphas = self._alphas
+
         res = []
         ori = Image.open(self._input_image_path)
 
-        for alp in self._alphas:
+        for alp in alphas:
             alp = alp * 10000#00
             img = Image.fromarray(alp)
             img = img.convert("L")
