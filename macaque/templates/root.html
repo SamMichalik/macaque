@@ -3,7 +3,8 @@
   <head>
     <title>Macaque - A modest app for visualizing neural net inference</title>
     <link rel="stylesheet" href="/static/styles.css">
-    <script src="/static/script.js" async></script>
+    <script src="//d3js.org/d3.v3.min.js" defer></script>
+    <script src="/static/script.js" defer></script>
   </head>
 
   <body>
@@ -26,14 +27,17 @@
         </table>
         <form method="post" enctype="multipart/form-data">
           <input id="inFile" type="file" name="input-file" accept=".jpg">
-          <input type="submit" value="Caption">
+          <input id="caption-button" type="submit" value="Caption" hidden>
         </form>
         <pre id="user-instructions"></pre>
       </div>
-      
+
     </div>
 
-    <div class="hideable" hidden>
+    <svg>
+    </svg>
+
+    <div class="hideable" style="text-align:center;" hidden>
       <button id="unroll-button" type="button">Unroll</button>
     </div>
 
