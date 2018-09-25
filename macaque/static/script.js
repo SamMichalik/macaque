@@ -16,6 +16,7 @@ var caption;
 var alphaValues;
 var graph;
 var d3Tree;
+var url;
 
 const MIN_WIDTH = 232;
 const MIN_HEIGHT = 232;
@@ -39,11 +40,13 @@ function initialize() {
   canvas.addEventListener('mousedown', event => { prezoom(event); });
   canvas.addEventListener('mousemove', event => { canvasMouseMove(event); });
 
+/*
   // register effects on the caption subject to mouse movement
   captionNodes.forEach(word => {
     word.addEventListener('mouseover', () => { highligthWord(word); });
     word.addEventListener('mouseout', () => { unhighlightWord(word); });
   });
+*/
 
   // register functionality that should occur when the user inputs an image
   inFile.addEventListener('input', () => {
@@ -146,23 +149,40 @@ function initialize() {
 
         // fetch alphas
         fetchImages(length).then(urls => {
-          var url = image.getAttribute('src');
+          url = image.getAttribute('src');
           var nodes = getCaptionNodes();
 
           for (var i = length-1; i >= 0; i--) {
             let ix = i;
 
+            nodes[ix].style.cursor = "pointer";
+
             // register callbacks for word highlighting & image switching on
             // mouse hoovering over the given word
             nodes[ix].addEventListener('mouseover', () => {
-              image.setAttribute('src', urls[ix]);
               highligthWord(nodes[ix]);
+              if (!image.locked) {
+                image.setAttribute('src', urls[ix]);
+              }
             });
 
             // analogously, add callbacks for when the mouse leaves the word
             nodes[ix].addEventListener('mouseout', () => {
-              image.setAttribute('src', url);
               unhighlightWord(nodes[ix]);
+              if (!image.locked) {
+                image.setAttribute('src', url);
+              }
+            });
+
+            nodes[ix].addEventListener('click', () => {
+              if (!nodes[ix].displayed) {
+                acquireImage(nodes[ix]);
+                image.setAttribute('src', urls[ix]);
+              }
+              else {
+                releaseImage(nodes[ix]);
+                image.setAttribute('src', url);
+              }
             });
           }
 
@@ -583,25 +603,48 @@ function graph_update(root) {
 }
 
 function click(node) {
-  if (!node.imageUrl) {
-    // fetch the image
-    var init = {
-      method: 'POST',
-      body: JSON.stringify(node.alignment)
-    };
+  if (!node.displayed) {
+    acquireImage(node);
+    if (!node.imageUrl) {
+      // fetch the image
+      var init = {
+        method: 'POST',
+        body: JSON.stringify(node.alignment)
+      };
 
-    fetch('single_alpha', init).then(response => {
-      response.blob().then(blob => {
-        node.imageUrl = URL.createObjectURL(blob);
-      })
-      .then(() => {
-        d3.select("img")
-          .attr("src", node.imageUrl);
+      fetch('single_alpha', init).then(response => {
+        response.blob().then(blob => {
+          node.imageUrl = URL.createObjectURL(blob);
+        })
+        .then(() => {
+          d3.select("img")
+            .attr("src", node.imageUrl)
+        });
       });
-    });
+    }
+    else {
+      d3.select("img")
+        .attr("src", node.imageUrl)
+    }
   }
   else {
     d3.select("img")
-      .attr("src", node.imageUrl)
+      .attr("src", url);
+    releaseImage(node);
   }
+}
+
+function acquireImage(node) {
+  if (image.holder) {
+    image.holder.displayed = false;
+  }
+  image.holder = node;
+  node.displayed = true;
+  image.locked = true;
+}
+
+function releaseImage(node) {
+  image.locked = false;
+  node.displayed = false;
+  image.holder = undefined;
 }
