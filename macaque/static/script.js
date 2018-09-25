@@ -14,6 +14,8 @@ var zoomY;
 var alphaUrls;
 var caption;
 var alphaValues;
+var graph;
+var d3Tree;
 
 const MIN_WIDTH = 232;
 const MIN_HEIGHT = 232;
@@ -43,29 +45,34 @@ function initialize() {
     word.addEventListener('mouseout', () => { unhighlightWord(word); });
   });
 
-  // hide the default image and caption
+  // register functionality that should occur when the user inputs an image
   inFile.addEventListener('input', () => {
+    // hide the default image and caption
     image.style.display = "none";
     hideCaption();
-   });
 
-  // make canvas visible and display the image selected by the user
-  inFile.addEventListener('input', () => {
+    // make canvas visible and display the image selected by the user
     canvas.style.display = "block";
     displayUserImage();
-  });
 
-  // display instructions for editing the user selected image
-  inFile.addEventListener('input', () => {
+    // display instructions for editing the user selected image
     showUserInstructions();
-  });
 
-  // routine to be run when a new image is input by the user
-  inFile.addEventListener('input', () => {
+    // hide elements relevant when the output has been generated
     var hideables = document.getElementsByClassName('hideable');
     for (var i = 0; i < hideables.length; i++) {
       hideables[i].hidden = true;
     }
+
+    // remove existing bs graph
+    var svg = document.querySelector('svg');
+    while ((child = svg.lastElementChild) !== null) {
+      svg.removeChild(child);
+    }
+
+    inFile.hidden = true;
+
+    document.getElementById('caption-button').hidden = false;
   });
 
   document.getElementById('unroll-button').onclick = () => {
@@ -78,7 +85,14 @@ function initialize() {
     var hCtx;
     var div;
 
+    // prevent the default behavior; it collides with what we're about
     event.preventDefault();
+
+    // hide 'Caption' button
+    document.getElementById('caption-button').hidden = true;
+
+    // display 'Browse' button
+    inFile.hidden = false;
 
     // set up a hidden canvas
     hCanvas = document.createElement('canvas');
@@ -89,8 +103,11 @@ function initialize() {
     // redraw the contents of the focus box to the hidden canvas
     hCtx.drawImage(canvas, focus.x, focus.y, IN_WIDTH, IN_HEIGHT, 0, 0, IN_WIDTH, IN_HEIGHT);
 
+    // make the cropped image accesible trough a url
     let img_url = hCanvas.toDataURL("image/jpeg", 1.0);
+    // hide the main canvas
     canvas.style.display = "none";
+    // display the cropped image inside a <img> tag
     image.style.display = "block";
     image.src = img_url;
 
@@ -100,6 +117,7 @@ function initialize() {
     // this function is responsible for uploading the user's image to the server
     function uploadBlob(blob) {
 
+      // prepare the image blob for transfer
       var formData = new FormData();
       formData.append('input-file', blob);
       var init = { method: 'POST', body: formData };
@@ -170,13 +188,26 @@ function initialize() {
           });
         });
 
+        // Fetch the beam search output graph
+        fetch('bs_graph').then(response => {
+          return response.json();
+        })
+        .then(json => {
+          var width = window.innerWidth - 200;
+          var height = (3 * window.innerHeight / 4) - 40;
+          graph = json;
+
+          d3Tree = d3.layout.tree()
+            .size([height, width]);
+
+          graph_update(graph);
+        });
+
       });
     }
 
     // hide user instructions as they are no longer relevant
     hideUserInstructions();
-
-
   });
 
   // display hidden elements relevant when the caption has been displayed
@@ -187,10 +218,11 @@ function initialize() {
     for (var i = 0; i < hideables.length; i++) {
       hideables[i].hidden = false;
     }
-
   });
 
 }
+
+
 
 function highligthWord(word) {
   word.style.color = "red";
@@ -473,4 +505,103 @@ function showAlphaTooltip(event, wordNum) {
   document.body.appendChild(tooltip);
   tooltip.style.top = event.pageY + 'px';
   tooltip.style.left = event.pageX + 'px';
+}
+
+function graph_update(root) {
+  var svg = d3.select("svg")
+  .attr("width", window.innerWidth)
+  .attr("height", 3 * window.innerHeight / 4)
+  .append("g") // <g> is a container for grouping of SVG elements
+  .attr("transform", "translate(" + 100 + "," + 20 + ")");
+
+  var diagonal = d3.svg.diagonal()
+  .projection(function(d) { return [d.y, d.x]; });
+
+  var i = 0;
+
+  // initialize the tree layout and return a list of the nodes
+  var nodes = d3Tree.nodes(root).reverse();
+
+  // collect a list of the links connecting the tree nodes
+  var links = d3Tree.links(nodes);
+
+  var node = svg.selectAll("g.node")
+    .data(nodes, function(d) { return d.id || (d.id = ++i); });
+
+  var nodeEnter = node.enter().append("g")
+    .attr("class", "node")
+    .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; })
+    .on("click", click);
+
+  var link = svg.selectAll("path.link")
+    .data(links, function(d) { return d.target.id; });
+
+/*
+  nodeEnter.append("circle")
+    .attr("r", 10);
+
+
+  nodeEnter.append("text")
+    .attr("dy", "2.5em")
+    .attr("text-anchor", "middle")
+    .text(function(d) { return d.token });
+*/
+  nodeEnter.append("rect")
+    .attr("width", 64)
+    .attr("height", 40)
+    .attr("x", -32)
+    .attr("y", -20)
+    .attr("rx", 4)
+    .attr("ry", 4);
+
+  nodeEnter.append("line")
+    .attr("x1", -32)
+    .attr("x2", 32)
+    .attr("y1", 0)
+    .attr("y2", 0);
+
+  nodeEnter.append("text")
+    .attr("dy", "-4")
+    .attr("text-anchor", "middle")
+    .text(function(d) { return d.token })
+
+  nodeEnter.append("text")
+    .attr("dy", "14")
+    .attr("text-anchor", "middle")
+    .text(function(d) { return d.score.toFixed(5) })
+
+/*
+  nodeEnter.append("text")
+    .attr("dy", "2.5em")
+    .attr("text-anchor", "middle")
+    .text(function(d) { return d.score });
+*/
+
+  link.enter().insert("path", "g")
+    .attr("class", "link")
+    .attr("d", diagonal);
+}
+
+function click(node) {
+  if (!node.imageUrl) {
+    // fetch the image
+    var init = {
+      method: 'POST',
+      body: JSON.stringify(node.alignment)
+    };
+
+    fetch('single_alpha', init).then(response => {
+      response.blob().then(blob => {
+        node.imageUrl = URL.createObjectURL(blob);
+      })
+      .then(() => {
+        d3.select("img")
+          .attr("src", node.imageUrl);
+      });
+    });
+  }
+  else {
+    d3.select("img")
+      .attr("src", node.imageUrl)
+  }
 }
